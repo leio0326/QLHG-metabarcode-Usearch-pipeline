@@ -1,7 +1,7 @@
 # 02.Cut primers for different PE reads
 #!/bin/bash
 cd "your working path"
-input_dir="01.Trimmomatic" # Last step output path
+input_dir="01.Trimmomatic"
 output_dir="02.Cutprimer"
 mkdir -p "$output_dir"
 #Parameters - g and - G correspond to the forward and reverse primer sequences
