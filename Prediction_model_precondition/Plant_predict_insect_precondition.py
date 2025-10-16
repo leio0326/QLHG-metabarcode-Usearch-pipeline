@@ -8,12 +8,11 @@ from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.utils.validation import check_X_y, check_array
 from sklearn.exceptions import NotFittedError
 
-
 class CurveExpertEmulator(BaseEstimator, RegressorMixin):
     def __init__(self, progress_bar=False):
         self.progress_bar = progress_bar
         self.models = {
-            # 基础模型
+            # Basic models
             "linear": lambda x, a, b: a + b * x,
             "quadratic": lambda x, a, b, c: a + b * x + c * x ** 2,
             "cubic": lambda x, a, b, c, d: a + b * x + c * x ** 2 + d * x ** 3,
@@ -22,7 +21,7 @@ class CurveExpertEmulator(BaseEstimator, RegressorMixin):
             "logarithmic": lambda x, a, b: a + b * np.log(x + 1e-10),
             "exponential": lambda x, a, b: a * np.exp(b * x),
 
-            # 复杂模型
+            # Complex models
             "bleasdale": lambda x, a, b, c: (a + b * x) ** (-1 / c),
             "richards": lambda x, a, b, c, d: a / (1 + np.exp(b - c * x)) ** (1 / d),
             "weibull": lambda x, a, b, c, d: a - b * np.exp(-c * x ** d),
@@ -31,7 +30,7 @@ class CurveExpertEmulator(BaseEstimator, RegressorMixin):
             "vapor_pressure": lambda x, a, b, c: np.exp(a + b / (x + 1e-10) + c * np.log(x + 1e-10)),
             "heat_capacity": lambda x, a, b, c: a + b * x + c / (x ** 2 + 1e-10),
 
-            # 新增模型
+            # Additional models
             "rational": lambda x, a, b, c, d: (a + b * x) / (1 + c * x + d * x ** 2),
             "modified_hoerl": lambda x, a, b, c: a * b ** (1 / (x + 1e-10)) * (x ** c),
             "sinusoidal": lambda x, a, b, c, d: a + b * np.cos(c * x + d),
@@ -102,15 +101,15 @@ class CurveExpertEmulator(BaseEstimator, RegressorMixin):
         }
 
     def _calculate_aicc_p(self, y_true, y_pred, n_params):
-        n = len(y_true)  # 样本量
-        k = n_params  # 参数数量
+        n = len(y_true)  # Sample size
+        k = n_params  # Number of parameters
 
-        if n <= k + 1:  # 防止除以零
+        if n <= k + 1:  # Prevent division by zero
             return np.inf
 
-        rss = np.sum((y_true - y_pred) ** 2)  # 残差平方和
+        rss = np.sum((y_true - y_pred) ** 2)  # Residual sum of squares
 
-        # AICc.p公式
+        # AICc.p formula
         term1 = n * np.log(rss / n)
         term2 = 2 * k
         term3 = (2 * k * (k + 1)) / (n - k - 1)
@@ -129,7 +128,7 @@ class CurveExpertEmulator(BaseEstimator, RegressorMixin):
                 bounds = self.bounds[name]
 
                 if name in ['richards', 'weibull', 'gompertz', 'logistic', 'saturation_growth']:
-                    p0[0] = max(y) * 0.8  # 调整初始值
+                    p0[0] = max(y) * 0.8  # Adjust initial value
 
                 params, _ = curve_fit(func, X.flatten(), y, p0=p0, bounds=bounds, maxfev=10000)
                 y_pred = func(X.flatten(), *params)
@@ -152,7 +151,7 @@ class CurveExpertEmulator(BaseEstimator, RegressorMixin):
             except Exception as e:
                 continue
 
-        # 筛选逻辑：先按标准差选前3，再选AICc.p最小的
+        # Selection logic: top 3 by std dev, then choose best by AICc.p
         if fitted_models:
             fitted_models.sort(key=lambda x: x['std_dev'])
             top3_std = fitted_models[:3]
@@ -186,19 +185,19 @@ class CurveExpertEmulator(BaseEstimator, RegressorMixin):
 
 
 def load_data(plant1_path, plant2_path, insect_path):
-    """加载数据，确保三个文件的样本ID完全一致"""
+    """Load data ensuring sample IDs are identical across all three files"""
     plant1 = pd.read_csv(plant1_path, index_col=0)
     plant2 = pd.read_csv(plant2_path, index_col=0)
     insect = pd.read_csv(insect_path, index_col=0)
 
-    # 验证样本ID是否一致
+    # Verify sample IDs are consistent
     assert all(plant1.index == plant2.index) and all(plant1.index == insect.index), \
-        "三个数据表的样本ID不一致！"
+        "Sample IDs are inconsistent across the three data tables!"
 
-    print("\n数据检查:")
-    print(f"植物数据1 - 样本数: {len(plant1)}, 物种数: {plant1.shape[1]}")
-    print(f"植物数据2 - 样本数: {len(plant2)}, 物种数: {plant2.shape[1]}")
-    print(f"昆虫数据 - 样本数: {len(insect)}, 物种数: {insect.shape[1]}")
+    print("\nData check:")
+    print(f"Plant data 1 - Samples: {len(plant1)}, Species: {plant1.shape[1]}")
+    print(f"Plant data 2 - Samples: {len(plant2)}, Species: {plant2.shape[1]}")
+    print(f"Insect data - Samples: {len(insect)}, Species: {insect.shape[1]}")
 
     return (plant1.values, plant2.values, insect.values,
             plant1.index.tolist(), plant1.shape[1], plant2.shape[1])
@@ -209,34 +208,33 @@ def analyze_samples(plant1_data, plant2_data, insect_data, sample_names,
                     min_samples=12, max_samples=12, reps=100, order_reps=100):
     results = []
 
-    for sample_size in tqdm(range(min_samples, max_samples + 1), desc="处理样本"):
-        # 存储所有有效曲线（用于后续平均）
+    for sample_size in tqdm(range(min_samples, max_samples + 1), desc="Processing samples"):
+        # Store all valid curves for subsequent averaging
         all_plant1_curves = []
         all_plant2_curves = []
         all_insect_curves = []
 
-        # 进行reps次独立采样
+        # Perform independent sampling reps times
         for _ in range(reps):
-            # 随机选择样本(确保plant1和plant2使用相同的样本)
+            # Randomly select samples (ensure plant1 and plant2 use same samples)
             idx = np.random.choice(len(sample_names), sample_size, replace=False)
 
-            # 获取当前采样的数据
+            # Get data for current sampling
             sampled_plant1 = plant1_data[idx]
             sampled_plant2 = plant2_data[idx]
             sampled_insect = insect_data[idx]
 
-            # 存储顺序排列的曲线
+            # Store ordered curves
             plant1_order_curves = []
             plant2_order_curves = []
             insect_order_curves = []
 
-            # 进行order_reps次顺序排列
+            # Perform order_reps times of ordering
             for _ in range(order_reps):
-                # 随机排列样本顺序
+                # Randomly permute sample order
                 order = np.random.permutation(sample_size)
 
-                # 计算当前顺序的累积曲线
-                # 正确的括号配对方式：
+                # Calculate accumulation curves for current order
                 plant1_curve = np.array([len(np.unique(np.nonzero(sampled_plant1[order[:i + 1]])[1]))
                                          for i in range(sample_size)])
                 plant2_curve = np.array([len(np.unique(np.nonzero(sampled_plant2[order[:i + 1]])[1]))
@@ -250,13 +248,13 @@ def analyze_samples(plant1_data, plant2_data, insect_data, sample_names,
                 plant2_order_curves.append(plant2_curve)
                 insect_order_curves.append(insect_curve)
 
-                # 如果有有效数据，计算当前采样的平均曲线
+                # If valid data exists, calculate average curve for current sampling
                 if plant1_order_curves:
                     all_plant1_curves.append(np.mean(plant1_order_curves, axis=0))
                 all_plant2_curves.append(np.mean(plant2_order_curves, axis=0))
                 all_insect_curves.append(np.mean(insect_order_curves, axis=0))
 
-                # 判断是否有有效数据
+                # Check if valid data exists
                 if not all_plant1_curves:
                     results.append({
                         'sample_size': sample_size,
@@ -272,34 +270,34 @@ def analyze_samples(plant1_data, plant2_data, insect_data, sample_names,
                     })
             continue
 
-        # 计算平均曲线（所有有效曲线的平均值）
+        # Calculate average curves (mean of all valid curves)
         avg_plant1 = np.mean(all_plant1_curves, axis=0)
         avg_plant2 = np.mean(all_plant2_curves, axis=0)
         avg_insect = np.mean(all_insect_curves, axis=0)
 
-        # 用平均曲线进行单次拟合
+        # Perform single fitting using average curves
         plant1_pred = np.nan
         plant1_model = None
         plant2_pred = np.nan
         plant2_model = None
 
         try:
-            # 对plant1数据进行拟合
+            # Fit plant1 data
             ce = CurveExpertEmulator()
             ce.fit(avg_plant1.reshape(-1, 1), avg_insect)
             plant1_pred = ce.predict_at(plant1_target)
             plant1_model = ce.get_best_model_info()['model_name']
         except Exception as e:
-            print(f"Plant1拟合错误: {e}")
+            print(f"Plant1 fitting error: {e}")
 
         try:
-            # 对plant2数据进行拟合
+            # Fit plant2 data
             ce = CurveExpertEmulator()
             ce.fit(avg_plant2.reshape(-1, 1), avg_insect)
             plant2_pred = ce.predict_at(plant2_target)
             plant2_model = ce.get_best_model_info()['model_name']
         except Exception as e:
-            print(f"Plant2拟合错误: {e}")
+            print(f"Plant2 fitting error: {e}")
 
         results.append({
             'sample_size': sample_size,
@@ -317,85 +315,35 @@ def analyze_samples(plant1_data, plant2_data, insect_data, sample_names,
     return pd.DataFrame(results)
 
 
-def plot_comparison(results_df, true_value=3407):
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 12))
-
-    valid_results = results_df[results_df['n_valid'] > 0]
-
-    # 绘制预测结果对比
-    ax1.errorbar(valid_results['sample_size'], valid_results['plant1_mean_pred'],
-                 yerr=valid_results['plant1_std_pred'], fmt='o-', capsize=5,
-                 label=f'Plant1 (x={valid_results["plant1_target_x"].iloc[0]})')
-    ax1.errorbar(valid_results['sample_size'], valid_results['plant2_mean_pred'],
-                 yerr=valid_results['plant2_std_pred'], fmt='s-', capsize=5,
-                 label=f'Plant2 (x={valid_results["plant2_target_x"].iloc[0]})')
-    ax1.axhline(true_value, color='r', linestyle='--', label=f'True value ({true_value})')
-    ax1.set_xlabel("Sample size")
-    ax1.set_ylabel("Predicted insect richness")
-    ax1.legend()
-    ax1.grid(True)
-
-    # 绘制模型分布对比
-    for model in pd.concat([valid_results['plant1_dominant_model'],
-                          valid_results['plant2_dominant_model']]).unique():
-        if pd.notna(model):
-            # Plant1用圆形标记
-            mask1 = valid_results['plant1_dominant_model'] == model
-            ax2.scatter(valid_results['sample_size'][mask1],
-                        [f"Plant1_{model}"] * sum(mask1), marker='o', label=f"Plant1 {model}")
-
-            # Plant2用方形标记
-            mask2 = valid_results['plant2_dominant_model'] == model
-            ax2.scatter(valid_results['sample_size'][mask2],
-                        [f"Plant2_{model}"] * sum(mask2), marker='s', label=f"Plant2 {model}")
-
-    ax2.set_xlabel("Sample size")
-    ax2.set_ylabel("Dominant model")
-    ax2.legend(bbox_to_anchor=(1.05, 1))
-    ax2.grid(True)
-
-    plt.tight_layout()
-    return fig
-
-
 if __name__ == "__main__":
-    # 配置路径
+    # Configure paths
     input_dir = "E:/Curve"
     output_dir = "E:/Curve/July/all"
     os.makedirs(output_dir, exist_ok=True)
 
-    # 加载数据
+    # Load data
     plant1, plant2, insect, samples, plant1_target, plant2_target = load_data(
-        f"{input_dir}/new_plant2.csv",
-        f"{input_dir}/July/all/new_July-feed.csv",  # 新增的plant2数据
-        f"{input_dir}/July/all/July-ins.csv"
+        f"{input_dir}/new_plant2.csv", # Surrounding plant OTU table （Observe/absence）
+        f"{input_dir}/July/all/new_July-feed.csv",  # Feeding plant OTU table （Observe/absence）
+        f"{input_dir}/July/all/July-ins.csv" # Insecta OTU table （Observe/absence）
     )
 
-    # 运行分析
+    # Run analysis
     results = analyze_samples(
         plant1, plant2, insect, samples,
         plant1_target, plant2_target,
         min_samples=3, max_samples=24, reps=1000, order_reps=1000
     )
 
-    # 保存结果
+    # Save results
     results.to_csv(f"{output_dir}/July_compare_results.csv", index=False)
-    print("\nResults saved to plant_comparison_results.csv")
-    # 绘制对比图
-    if not results[results['n_valid'] > 0].empty:
-        fig = plot_comparison(results, true_value=2504)
-        fig.savefig(f"{output_dir}/July_comparison_plot.png",
-                    dpi=300, bbox_inches='tight')
-        print("Comparison plot saved to plant_comparison_plot.png")
-    else:
-        print("Warning: No valid results to plot")
+    print("\nResults saved to July_compare_results.csv")
 
-    # 打印摘要
+    # Print summary
     print("\nResults summary:")
-    print(results[['sample_size', 'plant1_mean_pred', 'plant2_mean_pred'
-                   ]])
+    print(results[['sample_size', 'plant1_mean_pred', 'plant2_mean_pred']])
 
-    # 打印模型分布
+    # Print model distribution
     print("\nModel distribution:")
     print("Plant1 models:")
     print(results['plant1_dominant_model'].value_counts())
