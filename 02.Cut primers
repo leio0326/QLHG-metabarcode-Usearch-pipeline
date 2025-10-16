@@ -1,29 +1,17 @@
 # 02.Cut primers for different PE reads
 #!/bin/bash
-cd /data01/duanlei/ecology/rawdata/COI/20250115
-# 输入文件夹
-input_dir="01.Trimmomatic"
-# 输出文件夹
+cd "your working path"
+input_dir="01.Trimmomatic" # Last step output path
 output_dir="02.Cutprimer"
-
-# 创建输出文件夹（如果不存在）
 mkdir -p "$output_dir"
-
-# 遍历所有成对的 _1_trimmed.fq 和 _2_trimmed.fq 文件
+#Parameters - g and - G correspond to the forward and reverse primer sequences
 for file1 in "$input_dir"/*_1_trimmed.fq; do
-    # 获取对应的 _2_trimmed.fq 文件
     file2="${file1/_1_trimmed.fq/_2_trimmed.fq}"
-    
-    # 检查 _2_trimmed.fq 文件是否存在
     if [[ -f "$file2" ]]; then
-        # 获取基础文件名，去掉 "_trimmed" 部分
         base_name=$(basename "$file1" "_1_trimmed.fq")
-        
-        # 运行 cutadapt，对成对的文件进行处理
         cutadapt -g ^ACWGGWTGRACWGTNTAYCC -G ^TCDGGRTGNCCRAARAAYCA -e 0.1 -m 200 --no-indel --pair-filter=any --discard-untrimmed -o "$output_dir/${base_name}_1.fq" -p "$output_dir/${base_name}_2.fq" "$file1" "$file2"
-        
         echo "Processed: $file1 and $file2"
     else
-        echo "对应的 _2 文件未找到: $file2"
+        echo "Lost: $file2"
     fi
 done
