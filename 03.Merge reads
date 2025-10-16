@@ -6,18 +6,11 @@ USEARCH_PATH="~/soft/usearch"
 INPUT_DIR="02.Cutprimer"
 OUTPUT_DIR="03.Merged"
 mkdir -p "$OUTPUT_DIR"
-for file1 in 02.Cutprimer/*_1.fq; do
-    # 确定对应的 *_2.fq 文件
+for file1 in "$INPUT_DIR"/*_1.fq; do
     file2="${file1/_1.fq/_2.fq}"
-    
-    # 检查对应的 *_2.fq 文件是否存在
     if [[ -f "$file2" ]]; then
-        # 生成输出文件名，去掉文件后缀
         output_file="${OUTPUT_DIR}/$(basename "${file1/_1.fq/_merged.fq}")"
-
-        # 使用 usearch 合并成对的 FASTQ 文件
         "$USEARCH_PATH" -fastq_mergepairs "$file1" -reverse "$file2" -fastqout "$output_file" -fastq_nostagger
-        
         echo "Merged: $file1 and $file2 -> $output_file"
     else
         echo "Warning: Corresponding file for $file1 not found!"
