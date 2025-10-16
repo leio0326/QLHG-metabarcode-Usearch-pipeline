@@ -1,3 +1,4 @@
+#Process all sequences of appropriate length to ensure that they are unique
 #!/bin/bash
 cd "your working path"
 USEARCH_PATH="~/soft/usearch"
