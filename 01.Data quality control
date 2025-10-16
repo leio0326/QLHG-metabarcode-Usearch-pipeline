@@ -4,7 +4,7 @@ cd "your working path"
 #Trimmomatic path" 
 TRIMMOMATIC_JAR="~/soft/trim/Trimmomatic-0.38/trimmomatic-0.38.jar"
 #Creat output path
-OUTPUT_DIR="/data01/duanlei/ecology/rawdata/COI/20250115/01.Trimmomatic"
+OUTPUT_DIR="01.Trimmomatic"
 for file1 in *_1.fq; do
     file2="${file1/_1.fq/_2.fq}"
     if [[ -f "$file2" ]]; then
