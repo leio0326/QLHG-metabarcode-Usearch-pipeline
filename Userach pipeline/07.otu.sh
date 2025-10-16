@@ -1,9 +1,9 @@
+#Before the final step of clustering, all sequences will have their corresponding sample plot numbers added before the sequence ID after the previous step of Unique processing. Insect sequences are filtered and merged through deep learning models, while plant sequences are directly merged.
 #!/bin/bash
 cd "your working path"
 USEARCH_PATH="~/soft/usearch"
-INPUT_DIR="02.Cutprimer"
-OUTPUT_DIR="03.Merged"
+INPUT_DIR="06.Unique"
+OUTPUT_DIR="07.OTU"
 mkdir -p "$OUTPUT_DIR"
-usearch -sortbysize 06.Unique/all.uni.fa -fastaout 06.Unique/all.sort.fa -minsize 2
-usearch -cluster_otus 06.Unique/all.sort.fa -otus 07.OTU/cluster/all.otus.fa -relabel OTU -uparseout 07.OTU/cluster/all_out -minsize 5
-usearch -unoise3 06.Unique/all.sort.fa -zotus 07.OTU/unoise/zotus.fa -tabbedout 07.OTU/unoise/unoise3.txt
+"$USEARCH_PATH" -sortbysize "$INPUT_DIR"/all.uni.fa -fastaout "$INPUT_DIR"/all.sort.fa -minsize 2
+"$USEARCH_PATH" -cluster_otus "$INPUT_DIR"/all.sort.fa -otus "$OUTPUT_DIR"/cluster/all.otus.fa -relabel OTU -uparseout "$OUTPUT_DIR"/cluster/all_out -minsize 2
