@@ -323,9 +323,9 @@ if __name__ == "__main__":
 
     # Load data
     plant1, plant2, insect, samples, plant1_target, plant2_target = load_data(
-        f"{input_dir}/new_plant2.csv", # Surrounding plant OTU table （Observe/absence）
-        f"{input_dir}/July/all/new_July-feed.csv",  # Feeding plant OTU table （Observe/absence）
-        f"{input_dir}/July/all/July-ins.csv" # Insecta OTU table （Observe/absence）
+        f"{input_dir}/new_plant2.csv", # Surrounding plant OTU table (Observe/absence)
+        f"{input_dir}/July/all/new_July-feed.csv",  # Feeding plant OTU table (Observe/absence)
+        f"{input_dir}/July/all/July-ins.csv" # Insecta OTU table (Observe/absence)
     )
 
     # Run analysis
@@ -349,3 +349,4 @@ if __name__ == "__main__":
     print(results['plant1_dominant_model'].value_counts())
     print("\nPlant2 models:")
     print(results['plant2_dominant_model'].value_counts())
+
